@@ -142,8 +142,8 @@ def main(registry_url, username, password, min_kept, max_age, max_dev_age, max_r
             logger.info('Image: %s:%s [%s, age %dd]', repository, tag, release_type, age)
 
             if not digest:
-                logger.warning('%s:%s already deleted', repository, tag)
-                continue  # image already deleted
+                logger.warning('Already deleted: %s:%s', repository, tag)
+                continue
 
             if release_type == 'dev':
                 if age > max_dev_age:

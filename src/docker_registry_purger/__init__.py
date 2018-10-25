@@ -13,14 +13,18 @@ logger = daiquiri.getLogger(__name__)
 
 
 class Registry:
-    def __init__(self, url):
+    def __init__(self, url, username=None, password=None):
         self.base_url = urlparse.urljoin(url, '/v2/')
+        self.username = username
+        self.password = password
 
     def _request(self, method, path, **kwargs):
         kwargs.setdefault('allow_redirects', True)
         return requests.request(
             method=method,
             url=urlparse.urljoin(self.base_url, path),
+            auth=(self.username, self.password),
+
             **kwargs,
         )
 
@@ -75,6 +79,14 @@ def execute(dry_run, fct, *args, **kwargs):
 @click.command()
 @click.argument('registry-url')
 @click.option(
+    '-u', '--username', default=None, type=click.STRING,
+    help='Username', show_default=False,
+)
+@click.option(
+    '-p', '--password', default=None, type=click.STRING,
+    help='Password', show_default=False,
+)
+@click.option(
     '--min-kept', default=7, type=click.INT,
     help='Minimal tags to keep', show_default=True,
 )
@@ -93,10 +105,10 @@ def execute(dry_run, fct, *args, **kwargs):
 @click.option('--dry-run/--no-dry-run', default=False, help='Dry run')
 @click.option('-v', '--verbose', count=True, help='Be verbose')
 @click.option('-q', '--quiet', count=True, help='Be quiet')
-def main(registry_url, min_kept, max_age, max_dev_age, max_rc_age, dry_run, verbose, quiet):
+def main(registry_url, username, password, min_kept, max_age, max_dev_age, max_rc_age, dry_run, verbose, quiet):
     setup_logging(1 + quiet - verbose)
 
-    registry = Registry(registry_url)
+    registry = Registry(registry_url, username, password)
     for repository in registry.list_repositories():
         logger.info('Checking <%s> repository', repository)
         tags = sorted(

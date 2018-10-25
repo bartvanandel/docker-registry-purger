@@ -118,6 +118,10 @@ def get_release_type(tag):
     help='Minimal tags to keep', show_default=True,
 )
 @click.option(
+    '--protect-latest/--no-protect-latest', default=True,
+    help='Protect \'latest\' tag from deletion', show_default=True,
+)
+@click.option(
     '--max-age', default=6 * 30, type=click.INT,
     help='Maximum age (in days) of tag', show_default=True,
 )
@@ -132,7 +136,7 @@ def get_release_type(tag):
 @click.option('--dry-run/--no-dry-run', default=False, help='Dry run')
 @click.option('-v', '--verbose', count=True, help='Be verbose')
 @click.option('-q', '--quiet', count=True, help='Be quiet')
-def main(registry_url, username, password, repository, repository_regex, min_keep, max_age, max_dev_age, max_rc_age, dry_run, verbose, quiet):
+def main(registry_url, username, password, repository, repository_regex, min_keep, protect_latest, max_age, max_dev_age, max_rc_age, dry_run, verbose, quiet):
     setup_logging(1 + quiet - verbose)
 
     registry = Registry(registry_url, username, password)
@@ -160,6 +164,10 @@ def main(registry_url, username, password, repository, repository_regex, min_kee
             release_type = get_release_type(tag)
 
             logger.info('Image: %s:%s [%s, age %dd]', repository, tag, release_type, age)
+
+            if tag == 'latest' and protect_latest:
+                logger.debug('Keeping %s:latest', repository)
+                continue
 
             if not digest:
                 logger.warning('Already deleted: %s:%s', repository, tag)

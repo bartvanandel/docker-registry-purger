@@ -86,6 +86,14 @@ def is_dev(tag):
 def is_rc(tag):
     return RC_REGEX.search(tag) is not None
 
+def get_release_type(tag):
+    if is_dev(tag):
+        return 'dev'
+    elif is_rc(tag):
+        return 'rc'
+    else:
+        return 'prod'
+
 @click.command()
 @click.argument('registry-url')
 @click.option(
@@ -125,32 +133,34 @@ def main(registry_url, username, password, min_kept, max_age, max_dev_age, max_r
             [tag_info(registry, repository, tag) for tag in registry.list_tags(repository)],
             key=lambda x: x[2],
         )
-        counter = [
-            0 if is_dev(tag) or is_rc(tag) or not digest else 1
-            for tag, digest, age in tags
-        ]
-        for index, (tag, digest, age) in enumerate(tags, start=1):
-            logger.info('. %s', tag)
 
-            if sum(counter[:index]) <= min_kept:
-                continue
+        count_prod = 0
+
+        for (tag, digest, age) in tags:
+            release_type = get_release_type(tag)
+
+            logger.info('Image: %s:%s [%s, age %dd]', repository, tag, release_type, age)
 
             if not digest:
                 logger.warning('%s:%s already deleted', repository, tag)
                 continue  # image already deleted
 
-            if is_dev(tag):
+            if release_type == 'dev':
                 if age > max_dev_age:
                     logger.warning('Deleting %s:%s [dev, age %dd]', repository, tag, age)
                     execute(dry_run, registry.delete_digest, repository, digest)
 
-            elif is_rc(tag):
+            elif release_type == 'rc':
                 if age > max_rc_age:
                     logger.warning('Deleting %s:%s [rc, age %dd]', repository, tag, age)
                     execute(dry_run, registry.delete_digest, repository, digest)
 
             else:
-                if age > max_age:
+                count_prod = count_prod + 1
+
+                if count_prod <= min_kept:
+                    logger.debug('Keeping %s:%s [prod, %d/%d]', repository, tag, count_prod, min_kept)
+                elif age > max_age:
                     logger.warning('Deleting %s:%s [old, age %dd]', repository, tag, age)
                     execute(dry_run, registry.delete_digest, repository, digest)
 

@@ -106,6 +106,14 @@ def get_release_type(tag):
     help='Password', show_default=False,
 )
 @click.option(
+    '--repository', default=None, type=click.STRING, multiple=True,
+    help='Repository (i.e., Docker image name) to search', show_default=True,
+)
+@click.option(
+    '--repository-regex', default=None, type=click.STRING,
+    help='Repository regex to search', show_default=True,
+)
+@click.option(
     '--min-kept', default=7, type=click.INT,
     help='Minimal tags to keep', show_default=True,
 )
@@ -124,11 +132,22 @@ def get_release_type(tag):
 @click.option('--dry-run/--no-dry-run', default=False, help='Dry run')
 @click.option('-v', '--verbose', count=True, help='Be verbose')
 @click.option('-q', '--quiet', count=True, help='Be quiet')
-def main(registry_url, username, password, min_kept, max_age, max_dev_age, max_rc_age, dry_run, verbose, quiet):
+def main(registry_url, username, password, repository, repository_regex, min_kept, max_age, max_dev_age, max_rc_age, dry_run, verbose, quiet):
     setup_logging(1 + quiet - verbose)
 
     registry = Registry(registry_url, username, password)
-    for repository in registry.list_repositories():
+
+    if repository:
+        repositories = repository
+    else:
+        repositories = registry.list_repositories()
+
+    if repository_regex:
+        repository_regex = re.compile(repository_regex)
+        repositories = list(filter(repository_regex.search, repositories))
+        logger.info('Only checking these repositories: %s', ', '.join(repositories))
+
+    for repository in repositories:
         logger.info('Checking <%s> repository', repository)
         tags = natsorted(
             [tag_info(registry, repository, tag) for tag in registry.list_tags(repository)],

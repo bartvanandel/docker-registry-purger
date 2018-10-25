@@ -114,7 +114,7 @@ def get_release_type(tag):
     help='Repository regex to search', show_default=True,
 )
 @click.option(
-    '--min-kept', default=7, type=click.INT,
+    '--min-keep', default=7, type=click.INT,
     help='Minimal tags to keep', show_default=True,
 )
 @click.option(
@@ -132,7 +132,7 @@ def get_release_type(tag):
 @click.option('--dry-run/--no-dry-run', default=False, help='Dry run')
 @click.option('-v', '--verbose', count=True, help='Be verbose')
 @click.option('-q', '--quiet', count=True, help='Be quiet')
-def main(registry_url, username, password, repository, repository_regex, min_kept, max_age, max_dev_age, max_rc_age, dry_run, verbose, quiet):
+def main(registry_url, username, password, repository, repository_regex, min_keep, max_age, max_dev_age, max_rc_age, dry_run, verbose, quiet):
     setup_logging(1 + quiet - verbose)
 
     registry = Registry(registry_url, username, password)
@@ -178,8 +178,8 @@ def main(registry_url, username, password, repository, repository_regex, min_kep
             else:
                 count_prod = count_prod + 1
 
-                if count_prod <= min_kept:
-                    logger.debug('Keeping %s:%s [prod, %d/%d]', repository, tag, count_prod, min_kept)
+                if count_prod <= min_keep:
+                    logger.debug('Keeping %s:%s [prod, %d/%d]', repository, tag, count_prod, min_keep)
                 elif age > max_age:
                     logger.warning('Deleting %s:%s [old, age %dd]', repository, tag, age)
                     execute(dry_run, registry.delete_digest, repository, digest)

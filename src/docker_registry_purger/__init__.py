@@ -8,6 +8,7 @@ import urllib.parse as urlparse
 import click
 import daiquiri
 import isodate
+from natsort import natsorted
 import requests
 
 logger = daiquiri.getLogger(__name__)
@@ -129,9 +130,9 @@ def main(registry_url, username, password, min_kept, max_age, max_dev_age, max_r
     registry = Registry(registry_url, username, password)
     for repository in registry.list_repositories():
         logger.info('Checking <%s> repository', repository)
-        tags = sorted(
+        tags = natsorted(
             [tag_info(registry, repository, tag) for tag in registry.list_tags(repository)],
-            key=lambda x: x[2],
+            key=lambda x: (x[2], x[0].lower()),
         )
 
         count_prod = 0

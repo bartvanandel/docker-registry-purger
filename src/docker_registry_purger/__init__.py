@@ -84,8 +84,10 @@ def execute(dry_run, fct, *args, **kwargs):
 def is_dev(tag):
     return DEV_REGEX.search(tag) is not None
 
+
 def is_rc(tag):
     return RC_REGEX.search(tag) is not None
+
 
 def get_release_type(tag):
     if is_dev(tag):
@@ -95,7 +97,8 @@ def get_release_type(tag):
     else:
         return 'prod'
 
-@click.command()
+
+@click.command()  # noqa: C901 # Skip warning: 'main' is too complex
 @click.argument('registry-url')
 @click.option(
     '-u', '--username', default=None, type=click.STRING,
@@ -136,7 +139,14 @@ def get_release_type(tag):
 @click.option('--dry-run/--no-dry-run', default=False, help='Dry run')
 @click.option('-v', '--verbose', count=True, help='Be verbose')
 @click.option('-q', '--quiet', count=True, help='Be quiet')
-def main(registry_url, username, password, repository, repository_regex, min_keep, protect_latest, max_age, max_dev_age, max_rc_age, dry_run, verbose, quiet):
+def main(
+    registry_url, username, password,
+    repository, repository_regex,
+    min_keep, protect_latest,
+    max_age, max_dev_age, max_rc_age,
+    dry_run,
+    verbose, quiet,
+):
     setup_logging(1 + quiet - verbose)
 
     registry = Registry(registry_url, username, password)

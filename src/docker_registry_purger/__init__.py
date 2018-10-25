@@ -125,6 +125,10 @@ def get_release_type(tag):
     help='Protect \'latest\' tag from deletion', show_default=True,
 )
 @click.option(
+    '--protect-production/--no-protect-production', default=True,
+    help='Protect production tags from deletion', show_default=True,
+)
+@click.option(
     '--max-age', default=6 * 30, type=click.INT,
     help='Maximum age (in days) of tag', show_default=True,
 )
@@ -142,7 +146,7 @@ def get_release_type(tag):
 def main(
     registry_url, username, password,
     repository, repository_regex,
-    min_keep, protect_latest,
+    min_keep, protect_latest, protect_production,
     max_age, max_dev_age, max_rc_age,
     dry_run,
     verbose, quiet,
@@ -196,7 +200,9 @@ def main(
             else:
                 count_prod = count_prod + 1
 
-                if count_prod <= min_keep:
+                if protect_production:
+                    logger.debug('Keeping %s:%s [prod, protected]', repository, tag)
+                elif count_prod <= min_keep:
                     logger.debug('Keeping %s:%s [prod, %d/%d]', repository, tag, count_prod, min_keep)
                 elif age > max_age:
                     logger.warning('Deleting %s:%s [old, age %dd]', repository, tag, age)

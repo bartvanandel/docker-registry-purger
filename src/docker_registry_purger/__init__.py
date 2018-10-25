@@ -2,6 +2,7 @@
 import datetime
 import json
 import logging
+import re
 import urllib.parse as urlparse
 
 import click
@@ -10,6 +11,9 @@ import isodate
 import requests
 
 logger = daiquiri.getLogger(__name__)
+
+DEV_REGEX = re.compile(r'(?:\b|\d|_)dev(?:\b|\d|_)', re.IGNORECASE)
+RC_REGEX = re.compile(r'(?:\b|\d|_)rc(?:\b|\d|_)', re.IGNORECASE)
 
 
 class Registry:
@@ -76,6 +80,12 @@ def execute(dry_run, fct, *args, **kwargs):
         return fct(*args, **kwargs)
 
 
+def is_dev(tag):
+    return DEV_REGEX.search(tag) is not None
+
+def is_rc(tag):
+    return RC_REGEX.search(tag) is not None
+
 @click.command()
 @click.argument('registry-url')
 @click.option(
@@ -116,7 +126,7 @@ def main(registry_url, username, password, min_kept, max_age, max_dev_age, max_r
             key=lambda x: x[2],
         )
         counter = [
-            0 if 'dev' in tag or 'rc' in tag or not digest else 1
+            0 if is_dev(tag) or is_rc(tag) or not digest else 1
             for tag, digest, age in tags
         ]
         for index, (tag, digest, age) in enumerate(tags, start=1):
@@ -129,11 +139,11 @@ def main(registry_url, username, password, min_kept, max_age, max_dev_age, max_r
                 logger.warning('%s:%s already deleted', repository, tag)
                 continue  # image already deleted
 
-            if 'dev' in tag and age > max_dev_age:
+            if is_dev(tag) and age > max_dev_age:
                 logger.warning('Deleting %s:%s [dev: %s]', repository, tag, age)
                 execute(dry_run, registry.delete_digest, repository, digest)
 
-            elif 'rc' in tag and age > max_rc_age:
+            elif is_rc(tag) and age > max_rc_age:
                 logger.warning('Deleting %s:%s [rc: %s]', repository, tag, age)
                 execute(dry_run, registry.delete_digest, repository, digest)
 

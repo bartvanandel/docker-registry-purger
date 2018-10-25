@@ -139,17 +139,20 @@ def main(registry_url, username, password, min_kept, max_age, max_dev_age, max_r
                 logger.warning('%s:%s already deleted', repository, tag)
                 continue  # image already deleted
 
-            if is_dev(tag) and age > max_dev_age:
-                logger.warning('Deleting %s:%s [dev: %s]', repository, tag, age)
-                execute(dry_run, registry.delete_digest, repository, digest)
+            if is_dev(tag):
+                if age > max_dev_age:
+                    logger.warning('Deleting %s:%s [dev, age %dd]', repository, tag, age)
+                    execute(dry_run, registry.delete_digest, repository, digest)
 
-            elif is_rc(tag) and age > max_rc_age:
-                logger.warning('Deleting %s:%s [rc: %s]', repository, tag, age)
-                execute(dry_run, registry.delete_digest, repository, digest)
+            elif is_rc(tag):
+                if age > max_rc_age:
+                    logger.warning('Deleting %s:%s [rc, age %dd]', repository, tag, age)
+                    execute(dry_run, registry.delete_digest, repository, digest)
 
-            elif age > max_age:
-                logger.warning('Deleting %s:%s [old: %s]', repository, tag, age)
-                execute(dry_run, registry.delete_digest, repository, digest)
+            else:
+                if age > max_age:
+                    logger.warning('Deleting %s:%s [old, age %dd]', repository, tag, age)
+                    execute(dry_run, registry.delete_digest, repository, digest)
 
 
 if __name__ == '__main__':

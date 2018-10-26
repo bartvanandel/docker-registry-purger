@@ -48,12 +48,20 @@ class Registry:
     def delete_digest(self, repository, digest):
         return self._delete('{}/manifests/{}'.format(repository, digest))
 
-    def get_tag(self, repository, tag):
-        response = self._get('{}/manifests/{}'.format(repository, tag))
+    def get_tag(self, repository, tag, with_history=True):
+        # Retrieving a 'fat manifest' (i.e. manifest with history) is currently *very* slow in Nexus
+        # (many seconds per request), see https://issues.sonatype.org/browse/NEXUS-15277
+        # Therefore we provide an option to skip downloading history
+
+        response = self._get('{}/manifests/{}'.format(repository, tag), headers={
+            'Accept':
+                'application/vnd.docker.distribution.manifest.list.v2+json' if with_history
+                else 'application/vnd.docker.distribution.manifest.v2+json'
+        })
         return response.json(), response.headers.get('Docker-Content-Digest')
 
     def delete_tag(self, repository, tag):
-        _, digest = self.get_tag(repository, tag)
+        _, digest = self.get_tag(repository, tag, False)
         return self.delete_digest(repository, digest)
 
 

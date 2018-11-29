@@ -60,7 +60,9 @@ def setup_logging(verbosity):
     '--max-rc-age', default=3 * 30, type=click.INT,
     help='Maximum age (in days) of rc tag', show_default=True,
 )
-@click.option('--dry-run/--no-dry-run', default=True, help='Dry run')
+@click.option('-y', '--assume-yes', 'proceed', flag_value=True, default=None, help='Assume yes to all questions')
+@click.option('-n', '--assume-no', 'proceed', flag_value=False, default=None, help='Assume no to all questions')
+@click.option('--dry-run/--no-dry-run', default=False, help='Dry run')
 @click.option('-v', '--verbose', count=True, help='Be verbose')
 @click.option('-q', '--quiet', count=True, help='Be quiet')
 def main(
@@ -68,6 +70,7 @@ def main(
     repository, repository_regex,
     min_keep, protect_latest, protect_production,
     max_age, max_dev_age, max_rc_age,
+    proceed,
     dry_run,
     verbose, quiet,
 ):
@@ -85,7 +88,7 @@ def main(
         repositories = list(filter(repository_regex.search, repositories))
         logger.info('Only checking these repositories: %s', ', '.join(repositories))
 
-    purger = Purger(registry=registry, dry_run=dry_run)
+    purger = Purger(registry=registry, dry_run=dry_run, proceed=proceed)
 
     purger.add_strategy(strategies.WhitelistStrategy(keep_latest=True))
     purger.add_strategy(strategies.TimestampTagStrategy(max_age=90))

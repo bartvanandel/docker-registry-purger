@@ -34,42 +34,48 @@ def setup_logging(verbosity):
 )
 @click.option(
     '--repository-regex', default=None, type=click.STRING,
-    help='Repository regex to search', show_default=True,
+    help='Repository regex to search'
 )
 @click.option(
-    '--min-keep', default=7, type=click.INT,
-    help='Minimal tags to keep', show_default=True,
+    '--whitelist-file', default=None, type=click.STRING,
+    help='Whitelist file'
 )
 @click.option(
-    '--protect-latest/--no-protect-latest', default=True,
-    help='Protect \'latest\' tag from deletion', show_default=True,
+    '--keep-latest-tag/--no-keep-latest-tag', default=True,
+    help='Protect "latest" tag from deletion', show_default=True,
 )
 @click.option(
-    '--protect-production/--no-protect-production', default=True,
-    help='Protect production tags from deletion', show_default=True,
+    '--require-semver/--no-require-semver', default=False,
+    help='Require all tags (except "latest") to follow the semver release scheme. ' \
+        'When set to True, all non-semver tags will be removed.', show_default=True,
 )
 @click.option(
-    '--max-age', default=6 * 30, type=click.INT,
-    help='Maximum age (in days) of tag', show_default=True,
+    '--max-age-prerelease', default=90, type=click.INT,
+    help='Maximum age (in days) of a semver prerelease tag', show_default=True,
 )
 @click.option(
-    '--max-dev-age', default=3 * 30, type=click.INT,
-    help='Maximum age (in days) of dev tag', show_default=True,
+    '--trust-timestamp-tags/--no-trust-timestamp-tags', default=True,
+    help='Trust timestamps in tags', show_default=True,
 )
 @click.option(
-    '--max-rc-age', default=3 * 30, type=click.INT,
-    help='Maximum age (in days) of rc tag', show_default=True,
+    '-y', '--assume-yes', 'proceed', flag_value=True, default=None,
+    help='Assume yes to all questions'
+    )
+@click.option(
+    '-n', '--assume-no', 'proceed', flag_value=False, default=None,
+    help='Assume no to all questions'
 )
-@click.option('-y', '--assume-yes', 'proceed', flag_value=True, default=None, help='Assume yes to all questions')
-@click.option('-n', '--assume-no', 'proceed', flag_value=False, default=None, help='Assume no to all questions')
 @click.option('--dry-run/--no-dry-run', default=False, help='Dry run')
 @click.option('-v', '--verbose', count=True, help='Be verbose')
 @click.option('-q', '--quiet', count=True, help='Be quiet')
 def main(
     registry_url, username, password,
     repository, repository_regex,
-    min_keep, protect_latest, protect_production,
-    max_age, max_dev_age, max_rc_age,
+    whitelist_file,
+    keep_latest_tag,
+    require_semver,
+    max_age_prerelease,
+    trust_timestamp_tags,
     proceed,
     dry_run,
     verbose, quiet,
@@ -90,9 +96,10 @@ def main(
 
     purger = Purger(registry=registry, dry_run=dry_run, proceed=proceed)
 
-    purger.add_strategy(strategies.WhitelistStrategy(keep_latest=True))
-    purger.add_strategy(strategies.TimestampTagStrategy(max_age=90))
-    purger.add_strategy(strategies.SemverStrategy(max_age_prerelease=90))
+    purger.add_strategy(strategies.WhitelistStrategy(keep_latest=keep_latest_tag, filename=whitelist_file))
+    purger.add_strategy(strategies.SemverStrategy(max_age_prerelease=max_age_prerelease, trust_timestamp_tags=trust_timestamp_tags, require_semver=require_semver))
+    if trust_timestamp_tags:
+        purger.add_strategy(strategies.TimestampTagStrategy(max_age=max_age_prerelease))
 
     purger.run(repositories)
 

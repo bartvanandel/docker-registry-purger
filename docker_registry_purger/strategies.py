@@ -23,7 +23,7 @@ class BaseStrategy(object, metaclass=abc.ABCMeta):
 
 
 class WhitelistStrategy(BaseStrategy):
-    def __init__(self, keep_latest=True):
+    def __init__(self, keep_latest=True, filename=None, string=None):
         super(WhitelistStrategy, self).__init__()
 
         self.repos = []
@@ -32,6 +32,10 @@ class WhitelistStrategy(BaseStrategy):
 
         if keep_latest:
             self.tags.append('latest')
+        if filename:
+            self.load_file(filename)
+        if string:
+            self.load_string(string)
 
     def load_file(self, filename):
         try:
@@ -128,7 +132,7 @@ class WhitelistStrategy(BaseStrategy):
 
 
 class SemverStrategy(BaseStrategy):
-    def __init__(self, max_age_major=None, max_age_minor=None, max_age_patch=None, max_age_prerelease=90, trust_timestamp_tags=True):
+    def __init__(self, max_age_major=None, max_age_minor=None, max_age_patch=None, max_age_prerelease=90, trust_timestamp_tags=True, require_semver=False):
         super(SemverStrategy, self).__init__()
 
         self.max_age_major = max_age_major
@@ -137,6 +141,7 @@ class SemverStrategy(BaseStrategy):
         self.max_age_prerelease = max_age_prerelease
 
         self.trust_timestamp_tags = trust_timestamp_tags
+        self.require_semver = require_semver
 
     def should_keep(self, item, purger):
         semver = Semver.parse(item.tag)
@@ -167,8 +172,11 @@ class SemverStrategy(BaseStrategy):
             # Semver but young enough to keep
             return True, 'keep semver non-prerelease by default'
 
-        # Not a semver, leave undecided
-        return UNDECIDED
+        # Not a semver
+        if self.require_semver:
+            return False, 'not a semver'
+        else:
+            return UNDECIDED
 
 
 class TimestampTagStrategy(BaseStrategy):

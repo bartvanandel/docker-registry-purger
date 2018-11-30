@@ -33,7 +33,7 @@ class WhitelistStrategy(BaseStrategy):
     def load_file(self, filename):
         try:
             with open(filename, 'r') as file:
-                self.load_string(file.read())
+                self.load_string(file.readlines())
         except EnvironmentError as ex: # parent of IOError, OSError *and* WindowsError where available
             raise ex
 
@@ -83,25 +83,25 @@ class WhitelistStrategy(BaseStrategy):
             except ValueError:
                 line = raw_line
 
-            line = line.trim()
+            line = line.strip()
 
             if line:
                 parts = list(map(lambda s: s.strip(), line.split(':')))
 
                 if len(parts) != 2:
-                    raise ValueError(f'Error parsing line in whitelist file: {raw_line}')
+                    raise ValueError(f'Error parsing whitelist line: {raw_line}')
 
                 repo, tag = parts
 
                 if not repo:
-                    raise ValueError(f'Invalid repository in line: {raw_line}')
+                    raise ValueError(f'Invalid repository in whitelist line: {raw_line}')
 
                 if not tag:
-                    raise ValueError(f'Invalid tag or digest in line: {raw_line}')
+                    raise ValueError(f'Invalid tag or digest in whitelist line: {raw_line}')
 
                 if repo == '*':
                     if tag == '*':
-                        raise ValueError(f'Invalid line: {raw_line}')
+                        raise ValueError(f'Invalid whitelist line: {raw_line}')
                     else:
                         tags.append(tag)
                 elif tag == '*':

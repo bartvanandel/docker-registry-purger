@@ -72,16 +72,18 @@ class Purger:
 
     def mark_item(self, item):
         for strategy in self.strategies:
-            keep = strategy.should_keep(item, self)
+            keep, reason = strategy.should_keep(item, self)
 
             if keep is not None:
                 item.keep = keep
+                item.reason = reason
 
-                logger.info('Marking for %s: %s:%s (age: %sd)',
+                logger.info('Marked for %s: %s:%s (age: %sd, reason: %s)',
                     'keeping' if keep else 'DELETION',
                     item.repo,
                     item.tag or item.digest,
-                    '?' if item.age is None else str(item.age))
+                    '?' if item.age is None else str(item.age),
+                    reason)
 
                 # Stop evaluating next strategies once we've found an answer
                 break

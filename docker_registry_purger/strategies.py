@@ -9,11 +9,14 @@ from .timestamp import as_timestamp, find_timestamp
 logger = daiquiri.getLogger(__name__)
 
 
+UNDECIDED = (None, 'undecided')
+
+
 class BaseStrategy(object, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def should_keep(self, item, purger):
         """
-        Determines whether to keep (True) or delete (False) the specified item.
+        Determines whether to keep (True) or delete (False) the specified item, followed by a reason.
         Should return None if this strategy cannot decide.
         """
         raise NotImplementedError()
@@ -113,15 +116,15 @@ class WhitelistStrategy(BaseStrategy):
 
     def should_keep(self, item, purger):
         if item.repo in self.repos:
-            return True
+            return True, 'whitelisted by repository wildcard'
         elif item.tag in self.tags or item.digest in self.tags:
-            return True
+            return True, 'whitelisted by tag wildcard'
         else:
             for repo, tag in self.repotags:
                 if item.repo == repo and (item.tag == tag or item.digest == tag):
-                    return True
+                    return True, 'whitelisted'
 
-        return None
+        return UNDECIDED
 
 
 class SemverStrategy(BaseStrategy):
@@ -147,7 +150,7 @@ class SemverStrategy(BaseStrategy):
                 age = (datetime.date.today() - semver.timestamp).days
                 item.age = age
 
-                return age < self.max_age_prerelease
+                return age < self.max_age_prerelease, 'age based on timestamp in semver tag'
             else:
                 if (semver.prerelease and self.max_age_prerelease) or (self.max_age_major or self.max_age_minor or self.max_age_patch):
                     logger.info('Retrieving metadata for %s:%s', item.repo, item.tag)
@@ -159,13 +162,13 @@ class SemverStrategy(BaseStrategy):
 
                     # For the moment, only look at prereleases
                     if semver.prerelease:
-                        return age < self.max_age_prerelease
+                        return age < self.max_age_prerelease, 'age based on metadata'
 
             # Semver but young enough to keep
-            return True
+            return True, 'keep semver non-prerelease by default'
 
         # Not a semver, leave undecided
-        return None
+        return UNDECIDED
 
 
 class TimestampTagStrategy(BaseStrategy):
@@ -186,6 +189,6 @@ class TimestampTagStrategy(BaseStrategy):
             age = (datetime.date.today() - timestamp).days
             item.age = age
 
-            return age < self.max_age
+            return age < self.max_age, 'age based on timestamp in tag'
 
-        return None
+        return UNDECIDED

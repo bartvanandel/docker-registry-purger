@@ -1,9 +1,12 @@
-# Keep these specific repo:tag combinationws
+# Keep by repo:tag combination
 arc-toolchain-alpine:0.1.1-20180914T113002.git-b75ad52.0
 arc-toolchain-debian-wheezy:20180417T135737_a1bd9ad
 
-# Keep some tags for all repositories
+# Keep by digest
+arc-toolchain-debian-wheezy:sha256:1b381c4c048d34bd9267daf0df6d7c477040c43aaca67e2bc3773d3d27bf6399
+
+# Keep tags for all repositories
 *:0.1.0
 
-# Keep everything in some repositories
+# Keep entire repositories
 arc-bus-utils:*

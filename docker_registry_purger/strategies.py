@@ -1,6 +1,7 @@
 import abc
 import daiquiri
 import datetime
+import re
 
 from .semver import Semver
 from .timestamp import as_timestamp, find_timestamp
@@ -9,6 +10,7 @@ from .timestamp import as_timestamp, find_timestamp
 logger = daiquiri.getLogger(__name__)
 
 
+DIGEST_REGEX = re.compile(r'^(?:sha256:(?P<sha256>[0-9a-f]{64}))$')
 UNDECIDED = (None, 'undecided')
 
 
@@ -28,7 +30,9 @@ class WhitelistStrategy(BaseStrategy):
 
         self.repos = []
         self.tags = []
-        self.repotags = []
+        self.repo_tags = []
+        self.digests = []
+        self.repo_digests = []
 
         if keep_latest:
             self.tags.append('latest')
@@ -48,10 +52,12 @@ class WhitelistStrategy(BaseStrategy):
 
     def load_string(self, string):
         try:
-            repos, tags, repotags = self.parse_whitelist(string)
+            repos, tags, repo_tags, digests, repo_digests = self.parse_whitelist(string)
             self.repos.extend(repos)
             self.tags.extend(tags)
-            self.repotags.extend(repotags)
+            self.repo_tags.extend(repo_tags)
+            self.digests.extend(digests)
+            self.repo_digests.extend(repo_digests)
         except Exception as ex:
             raise ex
 
@@ -59,21 +65,25 @@ class WhitelistStrategy(BaseStrategy):
 
     def parse_whitelist(self, lines):
         """
-        Parses a whitelist file, which should be a text file with one repo:tag per line.
-        Empty and commented lines are skipped.
-        Note: anywhere a tag is used, a digest can be used as well.
+        Parses a whitelist file, which should be a text file with one
+        repo:digest_or_tag pair per line. Empty and commented lines are skipped.
+        Note that currently only sha256 digest is supported, and such values
+        should contain the proper 'sha256:' prefix in the digest_or_tag part.
+        For lines containing a digest, the repository is optional (because
+        digests are unique anyway), but having the repository available will
+        allow us to skip checking items for which the repository does not match.
+        Also note that multiple tags may point to the same digest (i.e., blob).
 
-        Keep specific tag for one repository:
+        Keep specific digest or tag for one repository:
+            some/repository:sha256:deafbeefdeadbeefdeafbeefdeadbeefdeafbeefdeadbeefdeafbeefdeadbeef
             some/repository:tag
 
         Keep entire repository:
             some/repository:*
 
-        Keep tag:
+        Keep digest or tag:
+            *:sha256:deafbeefdeadbeefdeafbeefdeadbeefdeafbeefdeadbeefdeafbeefdeadbeef
             *:tag
-
-        Keep everything (not very useful):
-            *:*
 
         Comments are allowed, and should start with '#':
             # some comment
@@ -82,7 +92,10 @@ class WhitelistStrategy(BaseStrategy):
 
         repos = []
         tags = []
-        repotags = []
+        repo_tags = []
+        digests = []
+        repo_digests = []
+
         for raw_line in lines:
             # Remove comment
             try:
@@ -93,40 +106,61 @@ class WhitelistStrategy(BaseStrategy):
             line = line.strip()
 
             if line:
-                parts = list(map(lambda s: s.strip(), line.split(':')))
+                parts = list(map(lambda s: s.strip(), line.split(':', 1)))
 
                 if len(parts) != 2:
-                    raise ValueError(f'Error parsing whitelist line: {raw_line}')
+                    raise ValueError(f'Invalid whitelist line: {raw_line}')
 
-                repo, tag = parts
+                repo, digest_or_tag = parts
 
                 if not repo:
-                    raise ValueError(f'Invalid repository in whitelist line: {raw_line}')
+                    raise ValueError(f'Missing repository in whitelist line: {raw_line}')
 
-                if not tag:
-                    raise ValueError(f'Invalid tag or digest in whitelist line: {raw_line}')
+                if not digest_or_tag:
+                    raise ValueError(f'Missing tag or digest in whitelist line: {raw_line}')
 
-                if repo == '*':
-                    if tag == '*':
-                        raise ValueError(f'Invalid whitelist line: {raw_line}')
+                if repo == '*' and digest_or_tag == '*':
+                    raise ValueError(f'Invalid whitelist line: {raw_line}')
+
+                is_digest = ':' in digest_or_tag
+
+                if is_digest and not DIGEST_REGEX.match(digest_or_tag):
+                    raise ValueError(f'Invalid digest in whitelist line: {raw_line}')
+
+                elif repo == '*':
+                    if is_digest:
+                        digests.append(digest_or_tag)
                     else:
-                        tags.append(tag)
-                elif tag == '*':
+                        tags.append(digest_or_tag)
+                elif digest_or_tag == '*':
                     repos.append(repo)
                 else:
-                    repotags.append((repo, tag))
+                    if is_digest:
+                        repo_digests.append((repo, digest_or_tag))
+                    else:
+                        repo_tags.append((repo, digest_or_tag))
 
-        return repos, tags, repotags
+        return repos, tags, repo_tags, digests, repo_digests
 
     def should_keep(self, item, purger):
         if item.repo in self.repos:
             return True, 'whitelisted by repository wildcard'
-        elif item.tag in self.tags or item.digest in self.tags:
+        elif item.digest in self.digests:
+            return True, f'whitelisted by digest: {digest}'
+        elif item.tag in self.tags:
             return True, 'whitelisted by tag wildcard'
         else:
-            for repo, tag in self.repotags:
-                if item.repo == repo and (item.tag == tag or item.digest == tag):
-                    return True, 'whitelisted'
+            for repo, tag in self.repo_tags:
+                if item.repo == repo and item.tag == tag:
+                    return True, 'whitelisted by tag'
+            for repo, digest in self.repo_digests:
+                if item.repo == repo:
+                    if not item.digest:
+                        item.digest = purger.registry.get_digest(item.repo, item.tag)
+                    if not item.digest:
+                        return True, 'digest not found'  # probably already deleted
+                    if item.digest == digest:
+                        return True, f'whitelisted by digest: {digest}'
 
         return UNDECIDED
 

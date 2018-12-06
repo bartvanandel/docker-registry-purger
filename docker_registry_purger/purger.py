@@ -1,9 +1,6 @@
 import daiquiri
-import datetime
 from natsort import natsorted
-import re
 
-from .semver import Semver
 from .utils import query_yes_no
 
 
@@ -45,19 +42,21 @@ class Purger:
         # Flatten
         items = sum(repo_items.values(), [])
 
-        delete_items_count = sum(1 for item in items if item.keep == False)
+        delete_items_count = sum(1 for item in items if item.keep is False)
 
         # Report
-        logger.info('Keeping %d items', sum(1 for item in items if item.keep == True))
+        logger.info('Keeping %d items', sum(1 for item in items if item.keep is True))
         logger.info('Deleting %d items', delete_items_count)
         logger.info('Keeping %d undecided items', sum(1 for item in items if item.keep is None))
-        logger.debug('Undecided items: %s', ', '.join((f'{item.repo}:{item.tag or item.digest}' for item in items if item.keep is None)))
+        logger.debug('Undecided items: %s', ', '.join(
+            f'{item.repo}:{item.tag or item.digest}' for item in items if item.keep is None
+        ))
 
         if not delete_items_count:
             logger.info('No items marked for deletion, so nothing to do!')
-        elif self.proceed == False:
+        elif self.proceed is False:
             logger.info('Skipping deletion because proceed=False')
-        elif self.proceed == True or query_yes_no('\nProceed with delete?'):
+        elif self.proceed is True or query_yes_no('\nProceed with delete?'):
             # Phase 3: delete marked items
             logger.info('Phase 3: delete marked items ...')
             self.delete_marked_items(items)
@@ -97,7 +96,7 @@ class Purger:
             self.delete_marked_item(item)
 
     def delete_marked_item(self, item):
-        if item.keep == False:
+        if item.keep is False:
             logger.info('%sDeleting %s:%s ...', '[dry run]' if self.dry_run else '', item.repo, item.digest or item.tag)
             if not self.dry_run:
                 self.registry.delete_digest_or_tag(item.repo, item.digest, item.tag)

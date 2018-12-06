@@ -45,7 +45,7 @@ class WhitelistStrategy(BaseStrategy):
         try:
             with open(filename, 'r') as file:
                 self.load_string(file.readlines())
-        except EnvironmentError as ex: # parent of IOError, OSError *and* WindowsError where available
+        except EnvironmentError as ex:  # parent of IOError, OSError *and* WindowsError where available
             raise ex
 
         return self
@@ -96,38 +96,13 @@ class WhitelistStrategy(BaseStrategy):
         digests = []
         repo_digests = []
 
-        for raw_line in lines:
-            # Remove comment
-            try:
-                line, comment = raw_line.split('#', 1)
-            except ValueError:
-                line = raw_line
+        for line in lines:
+            parsed_line = self.parse_whitelist_line(line)
 
-            line = line.strip()
+            if parsed_line:
+                repo, digest_or_tag, is_digest = parsed_line
 
-            if line:
-                parts = list(map(lambda s: s.strip(), line.split(':', 1)))
-
-                if len(parts) != 2:
-                    raise ValueError(f'Invalid whitelist line: {raw_line}')
-
-                repo, digest_or_tag = parts
-
-                if not repo:
-                    raise ValueError(f'Missing repository in whitelist line: {raw_line}')
-
-                if not digest_or_tag:
-                    raise ValueError(f'Missing tag or digest in whitelist line: {raw_line}')
-
-                if repo == '*' and digest_or_tag == '*':
-                    raise ValueError(f'Invalid whitelist line: {raw_line}')
-
-                is_digest = ':' in digest_or_tag
-
-                if is_digest and not DIGEST_REGEX.match(digest_or_tag):
-                    raise ValueError(f'Invalid digest in whitelist line: {raw_line}')
-
-                elif repo == '*':
+                if repo == '*':
                     if is_digest:
                         digests.append(digest_or_tag)
                     else:
@@ -142,11 +117,45 @@ class WhitelistStrategy(BaseStrategy):
 
         return repos, tags, repo_tags, digests, repo_digests
 
-    def should_keep(self, item, purger):
+    def parse_whitelist_line(self, raw_line):
+        line = raw_line
+
+        # Strip comment if it exists
+        if '#' in line:
+            line, comment = raw_line.split('#', 1)
+
+        # Strip whitespace from beginning and end
+        line = line.strip()
+
+        if line:
+            parts = list(map(lambda s: s.strip(), line.split(':', 1)))
+
+            if len(parts) != 2:
+                raise ValueError(f'Invalid whitelist line: {raw_line}')
+
+            repo, digest_or_tag = parts
+
+            if not repo:
+                raise ValueError(f'Missing repository in whitelist line: {raw_line}')
+
+            if not digest_or_tag:
+                raise ValueError(f'Missing tag or digest in whitelist line: {raw_line}')
+
+            if repo == '*' and digest_or_tag == '*':
+                raise ValueError(f'Invalid whitelist line: {raw_line}')
+
+            is_digest = ':' in digest_or_tag
+
+            if is_digest and not DIGEST_REGEX.match(digest_or_tag):
+                raise ValueError(f'Invalid digest in whitelist line: {raw_line}')
+
+            return repo, digest_or_tag, is_digest
+
+    def should_keep(self, item, purger):  # noqa: C901 # Skip warning: 'WhitelistStrategy.should_keep' is too complex
         if item.repo in self.repos:
             return True, 'whitelisted by repository wildcard'
         elif item.digest in self.digests:
-            return True, f'whitelisted by digest: {digest}'
+            return True, f'whitelisted by digest: {item.digest}'
         elif item.tag in self.tags:
             return True, 'whitelisted by tag wildcard'
         else:
@@ -160,13 +169,16 @@ class WhitelistStrategy(BaseStrategy):
                     if not item.digest:
                         return True, 'digest not found'  # probably already deleted
                     if item.digest == digest:
-                        return True, f'whitelisted by digest: {digest}'
+                        return True, f'whitelisted by digest: {item.digest}'
 
         return UNDECIDED
 
 
 class SemverStrategy(BaseStrategy):
-    def __init__(self, max_age_major=None, max_age_minor=None, max_age_patch=None, max_age_prerelease=90, trust_timestamp_tags=True, require_semver=False):
+    def __init__(self,
+            max_age_major=None, max_age_minor=None, max_age_patch=None, max_age_prerelease=90,
+            trust_timestamp_tags=True, require_semver=False
+    ):
         super(SemverStrategy, self).__init__()
 
         self.max_age_major = max_age_major
@@ -191,7 +203,8 @@ class SemverStrategy(BaseStrategy):
 
                 return age < self.max_age_prerelease, 'age based on timestamp in semver tag'
             else:
-                if (semver.prerelease and self.max_age_prerelease) or (self.max_age_major or self.max_age_minor or self.max_age_patch):
+                if (semver.prerelease and self.max_age_prerelease) or \
+                        (self.max_age_major or self.max_age_minor or self.max_age_patch):
                     logger.info('Retrieving metadata for %s:%s', item.repo, item.tag)
                     age, digest = purger.registry.get_age(item.repo, item.tag)
                     if age:

@@ -18,6 +18,7 @@ def find_timestamp(string):
     else:
         return None
 
+
 def as_timestamp(string):
     if len(string) != TIMESTAMP_LENGTH:
         return None
@@ -25,5 +26,5 @@ def as_timestamp(string):
         # NB: alternatively there is isodate.parse_datetime(string),
         #     however this is way too liberal in its excepted formats
         return datetime.datetime.strptime(string.upper(), TIMESTAMP_FORMAT).date()
-    except ValueError as e:
+    except ValueError:
         return None

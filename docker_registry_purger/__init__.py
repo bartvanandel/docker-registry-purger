@@ -46,8 +46,8 @@ def setup_logging(verbosity):
 )
 @click.option(
     '--require-semver/--no-require-semver', default=False,
-    help='Require all tags (except "latest") to follow the semver release scheme. ' \
-        'When set to True, all non-semver tags will be removed.', show_default=True,
+    help='Require all tags (except "latest") to follow the semver release scheme. '
+    'When set to True, all non-semver tags will be removed.', show_default=True,
 )
 @click.option(
     '--max-age-prerelease', default=90, type=click.INT,
@@ -60,7 +60,7 @@ def setup_logging(verbosity):
 @click.option(
     '-y', '--assume-yes', 'proceed', flag_value=True, default=None,
     help='Assume yes to all questions'
-    )
+)
 @click.option(
     '-n', '--assume-no', 'proceed', flag_value=False, default=None,
     help='Assume no to all questions'
@@ -96,10 +96,19 @@ def main(
 
     purger = Purger(registry=registry, dry_run=dry_run, proceed=proceed)
 
-    purger.add_strategy(strategies.WhitelistStrategy(keep_latest=keep_latest_tag, filename=whitelist_file))
-    purger.add_strategy(strategies.SemverStrategy(max_age_prerelease=max_age_prerelease, trust_timestamp_tags=trust_timestamp_tags, require_semver=require_semver))
+    purger.add_strategy(strategies.WhitelistStrategy(
+        keep_latest=keep_latest_tag,
+        filename=whitelist_file,
+    ))
+    purger.add_strategy(strategies.SemverStrategy(
+        max_age_prerelease=max_age_prerelease,
+        trust_timestamp_tags=trust_timestamp_tags,
+        require_semver=require_semver,
+    ))
     if trust_timestamp_tags:
-        purger.add_strategy(strategies.TimestampTagStrategy(max_age=max_age_prerelease))
+        purger.add_strategy(strategies.TimestampTagStrategy(
+            max_age=max_age_prerelease
+        ))
 
     purger.run(repositories)
 

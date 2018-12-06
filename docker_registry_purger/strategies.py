@@ -195,8 +195,6 @@ class SemverStrategy(BaseStrategy):
         if semver:
             item.semver = semver
 
-            age = -1
-
             if self.trust_timestamp_tags and semver.timestamp:
                 age = (datetime.date.today() - semver.timestamp).days
                 item.age = age

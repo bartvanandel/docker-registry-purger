@@ -45,13 +45,17 @@ class Purger:
         # Flatten
         items = sum(repo_items.values(), [])
 
+        delete_items_count = sum(1 for item in items if item.keep == False)
+
         # Report
         logger.info('Keeping %d items', sum(1 for item in items if item.keep == True))
-        logger.info('Deleting %d items', sum(1 for item in items if item.keep == False))
+        logger.info('Deleting %d items', delete_items_count)
         logger.info('Keeping %d undecided items', sum(1 for item in items if item.keep is None))
         logger.debug('Undecided items: %s', ', '.join((f'{item.repo}:{item.tag or item.digest}' for item in items if item.keep is None)))
 
-        if self.proceed == False:
+        if not delete_items_count:
+            logger.info('No items marked for deletion, so nothing to do!')
+        elif self.proceed == False:
             logger.info('Skipping deletion because proceed=False')
         elif self.proceed == True or query_yes_no('\nProceed with delete?'):
             # Phase 3: delete marked items

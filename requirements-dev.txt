@@ -2,7 +2,8 @@
 check-manifest
 flake8
 pytest
-readme-renderer
+readme_renderer
+readme_renderer[md]
 tox
 
 # Release

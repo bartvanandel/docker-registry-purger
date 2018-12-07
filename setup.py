@@ -1,9 +1,7 @@
-#!/usr/bin/env python
 from setuptools import setup
 
+from src.docker_registry_purger import __version__
+
 setup(
-    setup_requires=['setuptools>=30.3'],
-    package_dir={  # FIXME: wait for https://github.com/pypa/setuptools/issues/1136
-        '': 'src',
-    },
+    version=__version__
 )

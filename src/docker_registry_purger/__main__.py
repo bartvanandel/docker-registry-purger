@@ -6,7 +6,7 @@ import daiquiri
 
 from .purger import Purger
 from .registry import Registry
-from . import strategies
+from . import strategies, __version__
 
 
 logger = daiquiri.getLogger(__name__)
@@ -68,6 +68,7 @@ def setup_logging(verbosity):
 @click.option('--dry-run/--no-dry-run', default=False, help='Dry run')
 @click.option('-v', '--verbose', count=True, help='Be verbose')
 @click.option('-q', '--quiet', count=True, help='Be quiet')
+@click.version_option(__version__, prog_name='docker-registry-purger')
 def main(
     registry_url, username, password,
     repository, repository_regex,
@@ -113,4 +114,5 @@ def main(
     purger.run(repositories)
 
 
-main()
+if __name__ == "__main__":
+    main()

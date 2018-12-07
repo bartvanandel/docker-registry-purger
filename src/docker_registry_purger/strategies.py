@@ -176,14 +176,11 @@ class WhitelistStrategy(BaseStrategy):
 
 class SemverStrategy(BaseStrategy):
     def __init__(self,
-            max_age_major=None, max_age_minor=None, max_age_patch=None, max_age_prerelease=90,
+            max_age_prerelease=90,
             trust_timestamp_tags=True, require_semver=False
     ):
         super(SemverStrategy, self).__init__()
 
-        self.max_age_major = max_age_major
-        self.max_age_minor = max_age_minor
-        self.max_age_patch = max_age_patch
         self.max_age_prerelease = max_age_prerelease
 
         self.trust_timestamp_tags = trust_timestamp_tags
@@ -201,8 +198,7 @@ class SemverStrategy(BaseStrategy):
 
                 return age < self.max_age_prerelease, 'age based on timestamp in semver tag'
             else:
-                if (semver.prerelease and self.max_age_prerelease) or \
-                        (self.max_age_major or self.max_age_minor or self.max_age_patch):
+                if semver.prerelease and self.max_age_prerelease:
                     logger.info('Retrieving metadata for %s:%s', item.repo, item.tag)
                     age, digest = purger.registry.get_age(item.repo, item.tag)
                     if age:
@@ -210,7 +206,6 @@ class SemverStrategy(BaseStrategy):
                     if digest:
                         item.digest = digest
 
-                    # For the moment, only look at prereleases
                     if semver.prerelease:
                         return age < self.max_age_prerelease, 'age based on metadata'
 

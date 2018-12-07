@@ -1,10 +1,9 @@
-Docker Registry Purger
-======================
+# Docker Registry Purger
 
 A simple cleaner for private docker-registries.
 
-Installation
-------------
+
+## Installation
 
 For a system-wide install:
 
@@ -20,8 +19,7 @@ pip install docker-registry-purger
 ```
 
 
-Usage
------
+## Usage
 
 Clean registry using standard options (i.e., keep all regular semver releases, remove semver prereleases and timestamped releases older than 90 days).
 
@@ -40,8 +38,7 @@ to remove them you have to follow the procedure describe on
 https://docs.docker.com/registry/garbage-collection/#run-garbage-collection.
 
 
-Development
------------
+## Development
 
 To run directly from source, in a local virtual environment:
 

@@ -1,7 +1,9 @@
-graft docker_registry_purger
+graft src/docker_registry_purger
+graft examples
+
 prune docs
-prune examples
 prune tests
+
 global-exclude *.py[cod] __pycache__ *.so
 
 include CHANGELOG.md LICENSE README.md

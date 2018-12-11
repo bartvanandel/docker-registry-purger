@@ -73,7 +73,7 @@ class Registry:
             return None, digest
 
     def delete_tag(self, repository, tag):
-        _, digest = self.get_digest(repository, tag)
+        digest = self.get_digest(repository, tag)
         if digest:
             return self.delete_digest(repository, digest)
         else:

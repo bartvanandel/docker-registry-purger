@@ -97,6 +97,6 @@ class Purger:
 
     def delete_marked_item(self, item):
         if item.keep is False:
-            logger.info('%sDeleting %s:%s ...', '[dry run]' if self.dry_run else '', item.repo, item.digest or item.tag)
+            logger.info('%sDeleting %s:%s ...', '[dry run] ' if self.dry_run else '', item.repo, item.digest or item.tag)
             if not self.dry_run:
                 self.registry.delete_digest_or_tag(item.repo, item.digest, item.tag)

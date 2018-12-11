@@ -37,9 +37,15 @@ class Registry:
         return repositories
 
     def list_tags(self, repository):
-        tags = self._get(f'{repository}/tags/list').json()['tags'] or []
-        logger.debug('Found tags: %s', ', '.join(tags))
-        return tags
+        response = self._get(f'{repository}/tags/list')
+
+        if response:
+            tags = response.json()['tags']
+            logger.debug('Found tags: %s', ', '.join(tags))
+            return tags
+        else:
+            logger.debug('Failed to query tags for repository: %s', repository)
+            return []
 
     def delete_digest(self, repository, digest):
         return self._delete(f'{repository}/manifests/{digest}')
